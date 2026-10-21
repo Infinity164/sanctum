@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SANCTUM — внутренний информационный сервер</title>
+<style>
+:root{--bg:#c0c0c0;--lt:#fff;--dk:#808080;--bk:#000;--navy:#000080;--red:#8b0000;--paper:#f4f0e4}
+*{box-sizing:border-box}
+body{margin:0;background:#5a5a5a;font:16px/1.45 "Times New Roman",Times,serif;color:var(--bk)}
+a{color:#0000ee}a:visited{color:#551a8b}
+#win{max-width:980px;margin:10px auto;background:var(--bg);border:2px solid;border-color:var(--lt) var(--bk) var(--bk) var(--lt);box-shadow:1px 1px 0 var(--dk) inset}
+.title{background:linear-gradient(90deg,var(--navy),#1084d0);color:#fff;font:bold 14px Arial,sans-serif;padding:3px 6px;display:flex;justify-content:space-between}
+.addr{padding:4px 8px;font:13px Arial,sans-serif;border-bottom:1px solid var(--dk)}
+.addr span{background:#fff;border:2px inset var(--dk);padding:1px 6px;display:inline-block;min-width:60%}
+header{background:var(--bk);color:#e8e0d0;text-align:center;padding:14px 8px;border-bottom:3px double var(--red)}
+header h1{margin:0;font:bold 44px "Courier New",monospace;letter-spacing:10px;color:#d9d2c0}
+header p{margin:4px 0 0;font:13px "Courier New",monospace;color:#b33}
+nav{display:flex;flex-wrap:wrap;gap:4px;padding:6px}
+nav a{flex:1 1 150px;text-align:center;text-decoration:none;color:#000;font:bold 14px Arial,sans-serif;padding:6px 4px;background:var(--bg);border:2px solid;border-color:var(--lt) var(--bk) var(--bk) var(--lt)}
+nav a:active,nav a.on{border-color:var(--bk) var(--lt) var(--lt) var(--bk);background:#a8a8a8}
+nav a:focus-visible,a:focus-visible{outline:2px dotted var(--red);outline-offset:2px}
+main{margin:6px;padding:14px 18px;background:var(--paper);border:2px solid;border-color:var(--dk) var(--lt) var(--lt) var(--dk);min-height:380px}
+h2{font:bold 24px Arial,sans-serif;margin:0 0 10px;color:var(--navy);border-bottom:2px solid var(--navy)}
+h3{font:bold 17px Arial,sans-serif;margin:14px 0 4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}header h1{font-size:30px;letter-spacing:5px}}
+.box{border:2px solid;border-color:var(--lt) var(--dk) var(--dk) var(--lt);background:var(--bg);padding:8px 10px}
+.box h3{margin-top:0;background:var(--navy);color:#fff;padding:2px 6px;font-size:14px}
+table{border-collapse:collapse;width:100%;font:14px "Courier New",monospace}
+td,th{border:1px solid var(--dk);padding:3px 6px;text-align:left;vertical-align:top}
+th{background:#d8d8d8}
+.codes td:first-child{width:90px;font-weight:bold;text-align:center}
+.c-green td:first-child{background:#0a0;color:#fff}.c-yellow td:first-child{background:#fc0}
+.c-red td:first-child{background:#c00;color:#fff}.c-black td:first-child{background:#000;color:#fff}
+.c-white td:first-child{background:#fff}
+.codes tr.cur{outline:3px solid var(--bk);outline-offset:-3px;background:#e8ffe8}
+.codes tr.cur td:last-child::after{content:" ◄ ТЕКУЩИЙ";font-weight:bold;animation:b 1s steps(2) infinite}
+@keyframes b{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.codes tr.cur td:last-child::after{animation:none}}
+.big{font:bold 22px "Courier New",monospace}
+.list{list-style:none;padding:0;margin:0}
+.list li{padding:6px 2px;border-bottom:1px dotted var(--dk)}
+.list small{display:block;color:#555;font-family:"Courier New",monospace}
+.empty{padding:14px;border:2px dashed var(--dk);background:#fff;font-family:"Courier New",monospace}
+.redacted{background:#000;color:#000;padding:0 3px;user-select:none}
+.dossier{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.photo{width:150px;height:190px;flex:none;display:flex;align-items:center;justify-content:center;text-align:center;background:repeating-linear-gradient(45deg,#d8d8d8 0 8px,#c8c8c8 8px 16px);border:2px solid;border-color:var(--dk) var(--lt) var(--lt) var(--dk);font:bold 12px "Courier New",monospace;color:var(--red)}
+.dossier table{flex:1 1 260px;width:auto}
+.stamp{display:inline-block;border:3px double var(--red);color:var(--red);font:bold 13px "Courier New",monospace;padding:1px 8px;transform:rotate(-3deg)}
+.back{font:14px Arial,sans-serif}
+article p{max-width:75ch}
+.lvl{color:var(--red)}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+article td ul{margin:0;padding-left:18px}
+article th{width:170px}
+footer{text-align:center;font:12px Arial,sans-serif;padding:8px;color:#222}
+
+/* ---------- Терминал ---------- */
+.term{margin:6px;background:var(--bg);border:2px solid;border-color:var(--lt) var(--bk) var(--bk) var(--lt)}
+.term[hidden]{display:none}
+.term .title{font-size:13px}
+.term-scr{margin:4px;background:#000;color:#c0c0c0;font:14px/1.4 "Courier New",monospace;padding:8px 10px;height:260px;overflow-y:auto;border:2px solid;border-color:var(--dk) var(--lt) var(--lt) var(--dk);cursor:text}
+.term-log div{white-space:pre-wrap;word-break:break-word}
+.term-row{display:flex;align-items:baseline}
+.term-row label{white-space:pre;color:#c0c0c0}
+.term-row input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font:inherit;caret-color:#c0c0c0;padding:0}
+.term-scr:focus-within{box-shadow:0 0 0 2px var(--red)}
+.t-ok{color:#0c0}.t-err{color:#f55}.t-sys{color:#ff5}.t-dim{color:#808080}.t-cmd{color:#fff}.t-red{color:#f33;font-weight:bold}
+.term-bar{display:flex;justify-content:space-between;padding:2px 8px 4px;font:12px Arial,sans-serif;color:#222}
+
+/* ---------- События ---------- */
+#win,header,nav,main{transition:filter .8s,background-color .8s}
+body.fx-eclipse{background:#000}
+body.fx-eclipse header,body.fx-eclipse nav,body.fx-eclipse main{filter:brightness(.45) sepia(.5)}
+body.fx-eclipse header h1{text-shadow:0 0 18px #fff}
+body.fx-sea{background:#4a0000}
+body.fx-sea header{border-bottom-color:#f00;background:#1a0000}
+body.fx-alarm #win{animation:alarm .9s steps(2) infinite}
+body.fx-alarm .title{background:linear-gradient(90deg,#800000,#d01010)}
+@keyframes alarm{50%{box-shadow:0 0 0 6px #c00}}
+body.fx-limb header,body.fx-limb main{animation:glitch .35s steps(3) infinite}
+body.fx-limb header h1{color:#b33}
+@keyframes glitch{0%{transform:none;filter:none}33%{transform:translate(-3px,1px) skewX(2deg);filter:hue-rotate(140deg)}66%{transform:translate(3px,-1px);filter:invert(.15)}100%{transform:none}}
+body.fx-white #win{animation:flash 1.2s ease-out}
+@keyframes flash{0%{filter:brightness(3)}100%{filter:none}}
+.classified{background:#000;color:#000;padding:0 3px}
+.classified:hover,.classified:focus{color:#fff}
+@media(prefers-reduced-motion:reduce){body.fx-alarm #win,body.fx-limb header,body.fx-limb main,body.fx-white #win{animation:none}}
+</style>
+</head>
+<body>
+<div id="win">
+<div class="title"><span>SANCTUM Internal Server — Netscape</span><span>_ □ ✕</span></div>
+<div class="addr">Адрес: <span>http://sanctum.int/</span></div>
+<header>
+<h1>SANCTUM</h1>
+<p>НАУЧНО-РЕЛИГИОЗНАЯ ИССЛЕДОВАТЕЛЬСКАЯ ОРГАНИЗАЦИЯ · ПОДВЕДОМСТВЕННА ПРАВИТЕЛЬСТВУ США · ДЛЯ СЛУЖЕБНОГО ПОЛЬЗОВАНИЯ</p>
+</header>
+<nav id="nav"></nav>
+<main id="view"></main>
+<section class="term" id="term" aria-label="Терминал SANCTUM" hidden="">
+<div class="title"><span>Терминал SANCTUM — TTY1</span><span>_ □ ✕</span></div>
+<div class="term-scr" id="term-scr">
+<div class="term-log" id="term-log" role="log" aria-live="polite"><div class="t-dim">SANCTUM-DOS v3.11  (c) 1996 Министерство обороны США</div><div class="t-ok">Соединение установлено. Добро пожаловать, оперативник.</div></div>
+<form class="term-row" id="term-form" autocomplete="off">
+<label for="term-in">C:\SANCTUM&gt; </label><input id="term-in" type="text" spellcheck="false" autocapitalize="off" aria-label="Команда">
+</form>
+</div>
+<div class="term-bar"><span>Ожидание ввода</span><span>Сеанс защищён · 9600 бод</span></div>
+</section>
+<footer>Сентябрь 1996 · Просмотр оптимизирован для Netscape Navigator 3.0 · 800×600<br>Не распространять за пределами организации.</footer>
+</div>
+
+<script>
+/* ============================================================
+   НАСТРОЙКИ — меняйте здесь
+   ============================================================ */
+var CURRENT_CODE = "green";      // green | yellow | red | black | white
+var BASES_TOTAL = 49, BASES_ACTIVE = 43;
+var DATE_TEXT = "Сентябрь 1996";
+
+var CODES = [
+  {id:"green",  name:"ЗЕЛЁНЫЙ", text:"Всё спокойно."},
+  {id:"yellow", name:"ЖЁЛТЫЙ",  text:"Внештатная ситуация."},
+  {id:"red",    name:"КРАСНЫЙ", text:"Чрезвычайное происшествие."},
+  {id:"black",  name:"ЧЁРНЫЙ",  text:"Гибель человечества."},
+  {id:"white",  name:"БЕЛЫЙ",   text:"Конец великого бедствия."}
+];
+
+/* ============================================================
+   1. ШАБЛОНЫ СТАТЕЙ — обычно трогать не нужно
+   ------------------------------------------------------------
+   Каждый шаблон принимает объект с полями и возвращает статью.
+   В текстовых полях можно писать HTML (<b>, <br>, <p> и т.д.).
+   Поле photo необязательно: укажите путь к картинке
+   (например photo:"img/zombie.jpg"), иначе будет заглушка.
+   secret("████") — закрашенный (засекреченный) текст.
+   ============================================================ */
+function secret(t){ return '<span class="redacted">'+t+'</span>' }
+function level(t){ return '<b class="lvl">'+t+'</b>' }
+function list(items){ return '<ul>'+items.map(function(i){return '<li>'+i+'</li>'}).join('')+'</ul>' }
+function photoBox(src, stub){
+  return '<div class="photo">'+(src ? '<img src="'+src+'" alt="">' : (stub || 'МЕСТО ДЛЯ<br>ФОТОГРАФИИ'))+'</div>';
+}
+function dossier(photo, rows, after, stub){
+  return '<div class="dossier">'+photoBox(photo, stub)+'<table>'+
+    rows.map(function(r){ return '<tr><th>'+r[0]+'</th><td>'+r[1]+'</td></tr>' }).join('')+
+    '</table></div>'+(after||'');
+}
+
+/* Существо: id, title, threat, desc, counter[], habitat, photo? */
+function creature(o){
+  return {id:o.id, title:o.title, date:"УГРОЗА: "+o.threat, body: dossier(o.photo, [
+    ["Наименование", o.title],
+    ["Уровень угрозы сущности", level(o.threat)],
+    ["Описание", o.desc],
+    ["Способы противодействия", list(o.counter)],
+    ["Места обитания", o.habitat]
+  ])};
+}
+
+/* Аномалия: id, title, threat, desc, counter[], photo? */
+function anomaly(o){
+  return {id:o.id, title:o.title, date:"УГРОЗА: "+o.threat, body: dossier(o.photo, [
+    ["Наименование", o.title],
+    ["Уровень угрозы аномалии", level(o.threat)],
+    ["Описание", o.desc],
+    ["Способы противодействия", list(o.counter)]
+  ])};
+}
+
+/* Представитель: id, title, access, name, position, birth, place, note, photo? */
+function person(o){
+  return {id:o.id, title:o.title, date:"ДОПУСК: "+o.access, body: dossier(o.photo, [
+    ["Имя", o.name],
+    ["Должность", o.position],
+    ["Дата рождения", o.birth],
+    ["Место пребывания", o.place]
+  ], '<p><span class="stamp">ЗАСЕКРЕЧЕНО</span></p><p>'+o.note+'</p>',
+    'ФОТО<br>ОТСУТСТВУЕТ<br><br>ЗАСЕКРЕЧЕНО')};
+}
+
+/* Локация: id, title, significance, desc, photo? */
+function place(o){
+  return {id:o.id, title:o.title, date:"ЗНАЧЕНИЕ: "+o.significance, body: dossier(o.photo, [
+    ["Наименование", o.title],
+    ["Уровень стратегического значения", level(o.significance)],
+    ["Описание", o.desc]
+  ])};
+}
+
+/* ============================================================
+   2. СТАТЬИ — здесь добавляйте и правьте материалы
+   Новая статья = новый блок creature({...}) / anomaly({...}) /
+   person({...}) / place({...}) в нужном разделе. Не забудьте
+   запятую между статьями и уникальный id.
+   Для обычной статьи без шаблона:
+   {id:"...", title:"...", date:"...", body:"<p>HTML</p>"}
+   ============================================================ */
+var SECTIONS = {
+  history: {
+    title: "Организация SANCTUM",
+    intro: "Происхождение, структура и роль организации.",
+    articles: [
+      {id:"nationalization", title:"Национализация SANCTUM", date:"1992",
+       body:"<p>SANCTUM — научно-религиозная организация, существовавшая задолго до открытия Лимба. Долгие годы она вела свои исследования в одиночку, располагая скромными средствами и не находя поддержки.</p><p>Когда правительство США узнало, что организация обладает сведениями о новом измерении и возможностью выхода в него, оно протянуло SANCTUM руку помощи: взяло организацию под своё покровительство, обеспечило финансирование, защиту и доступ к ресурсам, о которых прежде нельзя было и мечтать. Благодаря щедрости и дальновидности правительства работа SANCTUM вышла на новый уровень.</p><p>Сегодня SANCTUM с благодарностью служит своему покровителю и поддерживает президента в гражданской войне.</p>"},
+      {id:"operatives", title:"Оперативники SANCTUM", date:"1996",
+       body:"<p>Оперативники организации объединяются руководством в ОГ - оперативные группы, состоящие из ученых, священников, агентов и специалистов. Спектр задач уникален для каждой группы: устранение, фиксация, изъятие и так далее. Подробности о каждой группе можно узнать в тематическом разделе или у ее куратора.</p><p>Деятельность оперативников строго засекречена для распространения вне юрисдикции организации.</p>"},
+      {id:"kognium1", title:"Когниум первого поколения", date:"1988",
+       body:"<p>Когниум - специальное средство в виде таблеток, выдаваемое всем сотрудникам Санктума. Производство и состав таблеток находится под строгой тайной. Данные таблетки предназначены для стабилизации ментального состояния субъекта в стрессовых, аномальных и парадоксальных условиях, а также в среде Лимба.</p><p>Таблетки первого поколения призваны стабилизировать общее состояние, однако они не могут полностью компенсировать условия работы в Лимбе. Такие таблетки выдаются офисным работникам, обслуживаюющему персоналу и охране объектов.</p>"}
+    ]
+  },
+  usa: {
+    title: "История США с 1988 года",
+    intro: "Хроника истории нашей страны с 1988 года.",
+    articles: [
+      {id:"timeline", title:"Хронология: 1988–1996", date:"1988–1996",
+       body:"<h3>Март 1988</h3><p>Правительство США исследует новое обнаруженное измерение - Лимб. Достоверно неизвестно, при каких обстоятельствах было найдено это измерение, однако нам известно точно, что после этого события мы вступили на порог неизбежной катастрофы.</p><h3>После начала исследований</h3><p>Нельзя сказать точно, что Лимб активно исследовался - мы и до сих пор не обладаем большей частью сведений о том, что он из себя представляет и как с ним взаимодействовать. По последним данным мы точно знаем, что там находится большая часть ресурсов, которые мы добываем на нашей планете, а также там есть неисчерпаемый источник энергии, потенциально подходящий для нас. Однако при длительном и открытом взаимодействии с миром Лимба, его природа стала просачиваться на Землю, из-за чего запустился необратимый механизм гибели планеты, а вместе с ней и нас. В июне 1988 года началась гибель урожая, а небо стало стремительно поглощаться темной дымкой, которую мы прозвали Затмением. Затем моря и океаны окрасились в кровавый цвет. Анализ этой жидкости показал, что она на 99.9% совпадает с человеческой кровью. И не смотря на то, что мы научились добывать пропитание и воду, мы все равно застали кризис, который наша планета еще не видала.</p><h3>1992</h3><p>В США начинается гражданская война. Вместе с тем, на улицах начали замечать метаморфов и зомбифицированных людей, которые не полностью превратились в ужасных существ. В это время наша еще слабая организация получает предложение президента, и при его покровительстве мы будем поддерживать нашу дорогую отчизну.</p><h3>Сентябрь 1996</h3><p>Война и кризис продолжаются. Продовольствие и воду получают искусственным путём, но на всех не хватает. Связь с остальным миром оборвалась окончательно. Теперь мы предоставлены сами себе.</p>"}
+    ]
+  },
+  metamorphs: {
+    title: "Бестиарий метаморфов",
+    intro: "Животные и люди, изменённые Лимбом. Все они враждебны.",
+    articles: [
+
+      creature({
+        id: "metazombie",
+        title: "Метазомби",
+        threat: "НИЗКИЙ-СРЕДНИЙ",
+        desc: "Люди, измененняемые Лимбом, проходят через несколько стадий. Одна из первых стадий - это метазомби. Зачастую, зараженные люди так и не развиваются в полноценных метаморфов, оставаясь на этом этапе развития. Метазомби - это очень живучие и крепкие сущности, лишенные разума и речи. Они действуют не осмысленно и проявляют лишь базовые функции, в числе которых ходьба и кусательные рефлексы. Их цель существования - пожирание живых людей, при чем животных и птиц они игнорируют, даже в случае, когда те нападают на них. По всей видимости, метазомби стараются лишь утолить свой постоянный голод, не интересуясь ничем другим.",
+        counter: [
+          "Поражение головы и позвоночника.",
+          "Не допускать ближнего контакта; действовать с дистанции и под огневым прикрытием.",
+          "Избегать укусов и контакта с телесными жидкостями; раненого немедленно изолировать и доложить куратору.",
+          "Не оставлять одиночных оперативников в зонах скопления."
+        ],
+        habitat: "Города и посёлки, заброшенные здания, больницы, станции, зоны вблизи проявлений Лимба.",
+        photo: "metazombie.png"
+      }),
+
+      creature({
+        id: "metamorph",
+        title: "Метаморфы",
+        threat: "СРЕДНИЙ",
+        desc: "Метаморфы - полноценно измененные животные и люди, созданные под влиянием Лимба. До конца не ясен механизм превращения субъекта в полноценного метаморфа. Точно ясно, что метаморфы - живые существа, лишенные всяких чувств и проявлений боли. Они, в противовес их более низменной версии - метазомби, не проявляют открытого голода, ибо при убийстве субъекта метаморфыы начинают либо безвольно бродить, либо идут к следующей цели. Скорее всего, при прямом зрительном контакте или непосредственной близости, метаморфы начинают ощущать полную и бесконтрольную враждебность к живым существам. Их цель не пожирание, а истребление.",
+        counter: [
+          "Тяжёлое вооружение, огонь, подавляющая огневая мощь.",
+          "Не доверять облику и голосу: любой контакт в зоне активности считать потенциально враждебным.",
+          "Фиксация и немедленный доклад о каждой новой форме."
+        ],
+        habitat: "Города и посёлки, заброшенные здания, больницы, станции, зоны вблизи проявлений Лимба.",
+        photo: "metamorph.png"
+      }),
+
+      creature({
+        id: "unbaptized",
+        title: "Некрещенные",
+        threat: "СРЕДНИЙ",
+        desc: "Некрещенный - паукообразные, младенческие версии метаморфов, обладающие аналогичной с ними моделью поведения. В отличии от классических метаморфов, они издают более осознанные звуки, чаще всего это детский смех или плач. Нападают как группами, так и по одиночке. Очень верткие и быстрые.",
+        counter: [
+          "Уничтожение на дальней дистанции",
+          "Тупое ближнее оружие"
+        ],
+        habitat: "Города и посёлки, заброшенные здания, больницы, станции, зоны вблизи проявлений Лимба.",
+        photo: "unbaptized.png"
+      })
+
+    ]
+  },
+  anomalies: {
+    title: "Бестиарий аномалий",
+    intro: "Известные проявления Лимба на Земле.",
+    articles: [
+
+      anomaly({
+        id: "limb-coma",
+        title: "Лимбовая кома",
+        threat: "СРЕДНИЙ",
+        desc: "Состояние, при котором сознание человека оказывается втянуто в Лимб, а тело остаётся на Земле. Пострадавший не реагирует на внешние раздражители, но жизненные функции сохраняются. Может возникать внезапно, в том числе при длительном контакте с проявлениями Лимба. Опасность состоит в том, что неизвестно, что вернётся в тело и вернётся ли вообще.",
+        counter: [
+          "Немедленно изолировать пострадавшего и поставить под наблюдение.",
+          "Не пытаться разбудить самостоятельно; вызывать учёного и священника.",
+          "Доставка в медицинский блок базы SANCTUM под охраной.",
+          "Фиксация времени начала состояния и любых изменений, доклад куратору."
+        ]
+      })
+
+    ]
+  },
+  limb: {
+    title: "Статьи про Лимб",
+    intro: "Сведения об измерении пока отсутствуют.",
+    articles: []
+  },
+  staff: {
+    title: "Представители организации",
+    intro: "Руководство и официальные лица SANCTUM.",
+    articles: [
+
+      person({
+        id: "director",
+        title: "Директор SANCTUM",
+        access: "D5",
+        name: secret("████████████"),
+        position: "Директор организации",
+        birth: secret("██.██.████"),
+        place: secret("██████████"),
+        note: "Фотография отсутствует ввиду секретности. Общая информация о директоре засекречена и не подлежит разглашению."
+      }),
+
+      person({
+        id: "directive",
+        title: "Директивное руководство",
+        access: "D5",
+        name: secret("████████████"),
+        position: "Высший руководящий орган организации",
+        birth: secret("██.██.████"),
+        place: secret("██████████"),
+        note: "Фотография отсутствует ввиду секретности. Состав директивного руководства засекречен и не подлежит разглашению."
+      }),
+
+      person({
+        id: "dr-miles",
+        title: "Доктор Майлз",
+        access: "C2",
+        name: "Майлз, " + secret("████████"),
+        position: "Куратор ОГ-3, физик-ядерщик",
+        birth: secret("██.██.████"),
+        place: secret("██████████"),
+        note: "Руководитель и куратор оперативной группы номер три. Конструктор защитной системы штаба Ноев Ковчег."
+      })
+
+    ]
+  },
+  groups: {
+    title: "Оперативные группы",
+    intro: "Состав и назначение оперативных групп SANCTUM.",
+    articles: [
+      /* Состав и назначение — впишите в body */
+      {id:"og-1", title:"ОГ-1", date:"Сформирована: ██.██.1993",
+       body:"<h3>Назначение</h3><p>Сведения удалены.</p><h3>Оперативники</h3><p>Сведения удалены.</p>"},
+      {id:"og-2", title:"ОГ-2", date:"Сформирована: ██.██.1995",
+       body:"<h3>Назначение</h3><p>Сведения удалены.</p><h3>Оперативники</h3><p>Сведения удалены.</p>"},
+      {id:"og-3", title:"ОГ-3", date:"Сформирована: ██.██.1996",
+       body:"<h3>Назначение</h3><p>Сведения не заполнены.</p><h3>Оперативники</h3><p>Сведения не заполнены.</p>"}
+    ]
+  },
+  locations: {
+    title: "Локации",
+    intro: "Базы SANCTUM и места, связанные с Лимбом.",
+    articles: [
+
+      place({
+        id: "noev-kovcheg",
+        title: "Штаб НОЕВ КОВЧЕГ",
+        significance: "ВЫСОКИЙ",
+        desc: "Штаб-дислокация оперативной группы номер три. Информация о местоположении штаба доступна с уровня допуска C4."
+      })
+
+    ]
+  }
+};
+var ORDER = ["history","usa","metamorphs","anomalies","limb","staff","groups","locations"];
+
+/* ============================================================
+   ОТРИСОВКА
+   ============================================================ */
+var nav = document.getElementById("nav"), view = document.getElementById("view");
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+function renderNav(active){
+  var h = '<a href="#/" class="'+(active==="home"?"on":"")+'">Главная</a>';
+  ORDER.forEach(function(k){
+    h += '<a href="#/'+k+'" class="'+(active===k?"on":"")+'">'+esc(SECTIONS[k].title)+'</a>';
+  });
+  nav.innerHTML = h;
+}
+
+function home(){
+  var cur = CODES.filter(function(c){return c.id===CURRENT_CODE})[0] || CODES[0];
+  var rows = CODES.map(function(c){
+    return '<tr class="c-'+c.id+(c.id===cur.id?" cur":"")+'"><td>'+c.name+'</td><td>'+c.text+'</td></tr>';
+  }).join("");
+  return '<h2>Добро пожаловать в сеть SANCTUM</h2>'+
+  '<p>SANCTUM — научно-религиозная исследовательская организация при финансировании Министерства обороны США. Если вы читаете этот текст, значит наши Отцы-основатели доверили вам судьбу всего человечества. Оправдайте их ожидания. Спасите мир от гибели.</p>'+
+  '<div class="grid">'+
+  '<div class="box"><h3>Сводка на '+esc(DATE_TEXT)+'</h3><table>'+
+  '<tr><th>Базы SANCTUM</th><td><span class="big">'+BASES_ACTIVE+'</span> активны из '+BASES_TOTAL+'</td></tr>'+
+  '<tr><th>США</th><td>Кризис и голод. Идёт гражданская война (с 1992)</td></tr>'+
+  '<tr><th>Мир</th><td>Человечество на грани вымирания. Осталось менее миллиарда людей.</td></tr></table></div>'+
+  '<div class="box"><h3>Ситуативный код: '+cur.name+'</h3><table class="codes">'+rows+'</table></div></div>'+
+  '<h3>Разделы</h3><ul class="list">'+ORDER.map(function(k){
+    return '<li><a href="#/'+k+'">'+esc(SECTIONS[k].title)+'</a><small>'+esc(SECTIONS[k].intro)+' Записей: '+SECTIONS[k].articles.length+'</small></li>';
+  }).join("")+'</ul>';
+}
+
+function section(k){
+  var s = SECTIONS[k], h = '<h2>'+esc(s.title)+'</h2><p>'+esc(s.intro)+'</p>';
+  if(!s.articles.length){
+    return h+'<div class="empty">Записей в этом разделе пока нет. Новые материалы будут добавлены.</div>';
+  }
+  return h+'<ul class="list">'+s.articles.map(function(a){
+    return '<li><a href="#/'+k+'/'+a.id+'">'+esc(a.title)+'</a><small>'+esc(a.date||"")+'</small></li>';
+  }).join("")+'</ul>';
+}
+
+function articlePage(k,id){
+  var s = SECTIONS[k], a = s.articles.filter(function(x){return x.id===id})[0];
+  if(!a) return section(k);
+  return '<p class="back"><a href="#/'+k+'">« '+esc(s.title)+'</a></p><article><h2>'+esc(a.title)+'</h2>'+
+    '<p><span class="stamp">'+esc(a.date||"")+'</span></p>'+a.body+'</article>';
+}
+
+function route(){
+  var p = location.hash.replace(/^#\/?/,"").split("/"), k = p[0];
+  if(k && SECTIONS[k]){
+    renderNav(k);
+    view.innerHTML = p[1] ? articlePage(k,p[1]) : section(k);
+    term.hidden = true;
+  } else {
+    renderNav("home");
+    view.innerHTML = home();
+    term.hidden = false;
+  }
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", route);
+
+/* ============================================================
+   ТЕРМИНАЛ — ключевые слова и события.
+   Чтобы добавить своё слово, допишите объект в KEYWORDS:
+   "слово": {reply:["строка", ...], run:function(arg){ ... }}
+   reply — что ответит терминал, run — что произойдёт на сайте
+   (необязательно), cls — класс строк ответа (t-sys, t-ok, t-red...).
+   COMMANDS — команды с аргументом: "слово": {help:"...", run:function(arg){ ... }}
+   ALIASES — синонимы команд: {"english":"русское"}.
+   Готовые события: fx("fx-eclipse"|"fx-sea"|"fx-alarm"|"fx-limb"|"fx-white", ms?),
+   unlockArticle() — открывает «Завет Отцов-основателей».
+   ============================================================ */
+var KEYWORDS = {};
+
+var COMMANDS = {};
+var ALIASES = {};
+
+var term = document.getElementById("term"), scr = document.getElementById("term-scr"),
+    log = document.getElementById("term-log"), form = document.getElementById("term-form"),
+    input = document.getElementById("term-in"), hist = [], hi = 0, timers = {};
+
+function norm(s){ return String(s).toLowerCase().replace(/ё/g,"е").replace(/\s+/g," ").trim() }
+function pad(s,n){ while(s.length<n) s+=" "; return s }
+function curCode(){ return CODES.filter(function(c){return c.id===CURRENT_CODE})[0] || CODES[0] }
+function out(text, cls){
+  var d = document.createElement("div");
+  d.textContent = text; if(cls) d.className = cls;
+  log.appendChild(d); scr.scrollTop = scr.scrollHeight;
+}
+function fx(name, ms){
+  var b = document.body.classList;
+  clearTimeout(timers[name]);
+  if(ms){ b.add(name); timers[name] = setTimeout(function(){ b.remove(name) }, ms); }
+  else b.toggle(name);
+}
+function unlockArticle(){
+  var a = SECTIONS.history.articles;
+  if(!a.some(function(x){return x.id==="covenant"})){
+    a.push({id:"covenant", title:"Завет Отцов-основателей", date:"СЕКРЕТНО",
+      body:""});
+  }
+  view.innerHTML = home();
+}
+
+function exec(raw){
+  var line = norm(raw), sp = line.indexOf(" "),
+      cmd = sp<0 ? line : line.slice(0,sp), arg = sp<0 ? "" : line.slice(sp+1);
+  cmd = ALIASES[cmd] || cmd;
+  if(KEYWORDS[line]){
+    var k = KEYWORDS[line];
+    k.reply.forEach(function(r){ out(r, k.cls||"t-sys") });
+    if(k.run) k.run();
+  } else if(COMMANDS[cmd]){
+    COMMANDS[cmd].run(arg);
+  } else {
+    out("Неизвестная команда: "+raw.trim()+".","t-err");
+  }
+}
+
+form.addEventListener("submit", function(e){
+  e.preventDefault();
+  var v = input.value; input.value = "";
+  out("C:\\SANCTUM> "+v, "t-cmd");
+  if(v.trim()){ hist.push(v); hi = hist.length; exec(v); }
+});
+input.addEventListener("keydown", function(e){
+  if(e.key==="ArrowUp" && hi>0){ input.value = hist[--hi]; e.preventDefault(); }
+  else if(e.key==="ArrowDown"){ hi = Math.min(hist.length, hi+1); input.value = hist[hi]||""; e.preventDefault(); }
+});
+scr.addEventListener("click", function(){ if(!window.getSelection().toString()) input.focus() });
+
+out("SANCTUM-DOS v3.11  (c) 1996 Министерство обороны США","t-dim");
+out("Соединение установлено. Добро пожаловать, оперативник.","t-ok");
+route();
+</script>
+</body></html>
